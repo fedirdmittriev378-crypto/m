@@ -124,10 +124,14 @@
             </li>
             {% else %}
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('login') }}">Войти</a>
+              <a class="btn btn-outline-light btn-sm me-2" href="{{ url_for('login') }}">
+                <i class="bi bi-box-arrow-in-right me-1"></i>Войти
+              </a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="{{ url_for('register') }}">Зарегистрироваться</a>
+              <a class="btn btn-primary btn-sm" href="{{ url_for('register') }}">
+                <i class="bi bi-person-plus me-1"></i>Регистрация
+              </a>
             </li>
             {% endif %}
           </ul>

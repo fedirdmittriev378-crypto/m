@@ -17,7 +17,7 @@ from urllib.parse import urlparse, urljoin
 
 @app.before_request
 def ensure_recurring_generated():
-    # load current user (if any) and генерируем до текущего дня
+    # load current user (if any) and генерируем доA текущего дня
     flask_g.user = None
     try:
         if 'user_id' in session:

@@ -72,3 +72,9 @@ def test_register_login_and_create_transaction(client, app):
         u = User.query.filter_by(username='alice').first()
         txs = Transaction.query.filter_by(user_id=u.id).all()
         assert len(txs) == 1
+
+
+def test_protected_routes_require_login(client):
+    rv = client.get('/transactions')
+    assert rv.status_code == 302
+    assert '/login' in rv.headers['Location']
