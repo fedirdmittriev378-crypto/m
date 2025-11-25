@@ -1,5 +1,17 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, FloatField, SelectField, TextAreaField, DateField, RadioField, FileField, BooleanField, IntegerField
+from wtforms import (
+    StringField,
+    SubmitField,
+    FloatField,
+    SelectField,
+    TextAreaField,
+    DateField,
+    RadioField,
+    FileField,
+    BooleanField,
+    IntegerField,
+    PasswordField,
+)
 from wtforms.validators import DataRequired, InputRequired, Optional, Email, EqualTo, Length
 from wtforms.widgets import ColorInput
 
@@ -127,12 +139,12 @@ class TransferForm(FlaskForm):
 class RegisterForm(FlaskForm):
     username = StringField("Имя пользователя", validators=[DataRequired(), Length(min=3, max=64)])
     email = StringField("Email (опционально)", validators=[Optional(), Email(), Length(max=128)])
-    password = StringField("Пароль", validators=[DataRequired(), Length(min=6)])
-    password_confirm = StringField("Повторите пароль", validators=[DataRequired(), EqualTo('password', message='Пароли должны совпадать')])
+    password = PasswordField("Пароль", validators=[DataRequired(), Length(min=6)])
+    password_confirm = PasswordField("Повторите пароль", validators=[DataRequired(), EqualTo('password', message='Пароли должны совпадать')])
     submit = SubmitField("Зарегистрироваться")
 
 
 class LoginForm(FlaskForm):
     username = StringField("Имя пользователя", validators=[DataRequired()])
-    password = StringField("Пароль", validators=[DataRequired()])
+    password = PasswordField("Пароль", validators=[DataRequired()])
     submit = SubmitField("Войти")

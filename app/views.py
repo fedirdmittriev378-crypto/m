@@ -11,6 +11,9 @@ from dateutil.relativedelta import relativedelta
 import pandas as pd
 import os
 import json
+from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
+from urllib.parse import urlparse, urljoin
 
 @app.before_request
 def ensure_recurring_generated():
@@ -38,6 +41,18 @@ def login_required(fn):
             return redirect(url_for('login', next=request.path))
         return fn(*args, **kwargs)
     return wrapper
+
+
+def _is_safe_redirect(target: str | None) -> bool:
+    """Allow redirects only inside current host."""
+    if not target:
+        return False
+    ref_url = urlparse(request.host_url)
+    test_url = urlparse(urljoin(request.host_url, target))
+    return (
+        test_url.scheme in ('http', 'https')
+        and ref_url.netloc == test_url.netloc
+    )
 
 @app.route("/")
 def index():
@@ -1865,13 +1880,24 @@ def register():
     form = RegisterForm()
     if form.validate_on_submit():
         username = form.username.data.strip()
-        if User.query.filter_by(username=username).first():
+        username_lc = username.lower()
+        if User.query.filter(func.lower(User.username) == username_lc).first():
             flash('Пользователь с таким именем уже существует', 'danger')
             return render_template('register.html', form=form)
-        u = User(username=username, email=form.email.data.strip() if form.email.data else None)
+        email = form.email.data.strip().lower() if form.email.data else None
+        if email and User.query.filter(func.lower(User.email) == email).first():
+            flash('Email уже используется', 'danger')
+            return render_template('register.html', form=form)
+        u = User(username=username, email=email)
         u.set_password(form.password.data)
-        db.session.add(u)
-        db.session.commit()
+        try:
+            db.session.add(u)
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash('Не удалось создать пользователя, попробуйте позже', 'danger')
+            return render_template('register.html', form=form)
+        session.clear()
         session['user_id'] = u.id
         flash('Регистрация прошла успешно', 'success')
         return redirect(url_for('index'))
@@ -1882,17 +1908,19 @@ def register():
 def login():
     from .forms import LoginForm
     form = LoginForm()
-    next_url = request.args.get('next') or url_for('index')
+    next_param = request.args.get('next') or request.form.get('next')
+    next_url = next_param if _is_safe_redirect(next_param) else url_for('index')
     if form.validate_on_submit():
         username = form.username.data.strip()
-        u = User.query.filter_by(username=username).first()
+        u = User.query.filter(func.lower(User.username) == username.lower()).first()
         if not u or not u.check_password(form.password.data):
             flash('Неверные учетные данные', 'danger')
-            return render_template('login.html', form=form)
+            return render_template('login.html', form=form, next=next_param)
+        session.clear()
         session['user_id'] = u.id
         flash('Вы вошли в систему', 'success')
         return redirect(next_url)
-    return render_template('login.html', form=form)
+    return render_template('login.html', form=form, next=next_param)
 
 
 @app.route('/logout')
