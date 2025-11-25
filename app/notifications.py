@@ -37,6 +37,8 @@ def check_budget_warnings():
                 message=f'Вы потратили {spent:.2f} из {budget.amount:.2f} ({percent:.0f}%)',
                 related_id=budget.id
             )
+            # attach to budget owner if set
+            notif.user_id = budget.user_id
             db.session.add(notif)
         elif percent >= 80 and percent < 100 and not existing:
             notif = Notification(
@@ -45,6 +47,7 @@ def check_budget_warnings():
                 message=f'Вы потратили {spent:.2f} из {budget.amount:.2f} ({percent:.0f}%)',
                 related_id=budget.id
             )
+            notif.user_id = budget.user_id
             db.session.add(notif)
 
 def check_debt_due():
@@ -69,6 +72,7 @@ def check_debt_due():
                     message=f'Долг просрочен на {days_overdue} дней. Осталось выплатить: {debt.amount - debt.paid_amount:.2f}',
                     related_id=debt.id
                 )
+                notif.user_id = debt.user_id
                 db.session.add(notif)
 
 def check_goal_reminders():
@@ -96,6 +100,7 @@ def check_goal_reminders():
                         message=f'До цели осталось {days_remaining} дней. Нужно накопить ещё {remaining:.2f}',
                         related_id=goal.id
                     )
+                    notif.user_id = goal.user_id
                     db.session.add(notif)
 
 def generate_all_notifications():

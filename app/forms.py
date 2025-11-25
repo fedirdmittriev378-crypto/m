@@ -1,6 +1,6 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, FloatField, SelectField, TextAreaField, DateField, RadioField, FileField, BooleanField, IntegerField
-from wtforms.validators import DataRequired, InputRequired, Optional
+from wtforms.validators import DataRequired, InputRequired, Optional, Email, EqualTo, Length
 from wtforms.widgets import ColorInput
 
 class CategoryForm(FlaskForm):
@@ -122,3 +122,17 @@ class TransferForm(FlaskForm):
     date = DateField("Дата", validators=[InputRequired()], format="%Y-%m-%d")
     note = TextAreaField("Примечание", validators=[Optional()])
     submit = SubmitField("Выполнить перевод")
+
+
+class RegisterForm(FlaskForm):
+    username = StringField("Имя пользователя", validators=[DataRequired(), Length(min=3, max=64)])
+    email = StringField("Email (опционально)", validators=[Optional(), Email(), Length(max=128)])
+    password = StringField("Пароль", validators=[DataRequired(), Length(min=6)])
+    password_confirm = StringField("Повторите пароль", validators=[DataRequired(), EqualTo('password', message='Пароли должны совпадать')])
+    submit = SubmitField("Зарегистрироваться")
+
+
+class LoginForm(FlaskForm):
+    username = StringField("Имя пользователя", validators=[DataRequired()])
+    password = StringField("Пароль", validators=[DataRequired()])
+    submit = SubmitField("Войти")

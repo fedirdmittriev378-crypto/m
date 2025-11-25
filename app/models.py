@@ -1,5 +1,6 @@
 from . import db
 from datetime import datetime, date
+from werkzeug.security import generate_password_hash, check_password_hash
 import enum
 
 class TransactionType(enum.Enum):
@@ -20,7 +21,8 @@ transaction_tags = db.Table('transaction_tags',
 class Category(db.Model):
     __tablename__ = "categories"
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(64), unique=True, nullable=False)
+    name = db.Column(db.String(64), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     color = db.Column(db.String(7), default="#6366f1")  # Hex color for category
     icon = db.Column(db.String(32), nullable=True)  # Icon name
 
@@ -36,6 +38,7 @@ class Account(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     notes = db.Column(db.String(256))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
     def __repr__(self):
         return f"<Account {self.name} {self.balance}>"
@@ -51,6 +54,7 @@ class Transaction(db.Model):
     account_id = db.Column(db.Integer, db.ForeignKey("accounts.id"), nullable=True)
     account = db.relationship("Account", backref=db.backref("transactions", lazy=True))
     note = db.Column(db.String(256))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     tags = db.relationship('Tag', secondary=transaction_tags, lazy='subquery', backref=db.backref('transactions', lazy=True))
 
     def __repr__(self):
@@ -59,7 +63,8 @@ class Transaction(db.Model):
 class Tag(db.Model):
     __tablename__ = "tags"
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(32), unique=True, nullable=False)
+    name = db.Column(db.String(32), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
     color = db.Column(db.String(7), default="#8b5cf6")
 
     def __repr__(self):
@@ -75,6 +80,7 @@ class Budget(db.Model):
     period_end = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
     def __repr__(self):
         return f"<Budget {self.category.name} {self.amount}>"
@@ -94,6 +100,7 @@ class Recurring(db.Model):
     end_date = db.Column(db.DateTime, nullable=True)
     next_date = db.Column(db.DateTime, nullable=False)
     active = db.Column(db.Boolean, default=True, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
     def __repr__(self):
         return f"<Recurring {self.amount} {self.type} every {self.frequency}>"
@@ -110,6 +117,7 @@ class Goal(db.Model):
     target_date = db.Column(db.DateTime, nullable=True)  # Целевая дата достижения
     active = db.Column(db.Boolean, default=True, nullable=False)
     notes = db.Column(db.String(256))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
     def __repr__(self):
         return f"<Goal {self.name} {self.target_amount}>"
@@ -139,6 +147,7 @@ class Debt(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     notes = db.Column(db.String(512))
     is_active = db.Column(db.Boolean, default=True, nullable=False)  # Активен ли кредит
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
     def __repr__(self):
         return f"<Debt {self.name} {self.amount}>"
@@ -177,6 +186,7 @@ class TransactionTemplate(db.Model):
     note = db.Column(db.String(256))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     use_count = db.Column(db.Integer, default=0)  # Счётчик использования
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
     def __repr__(self):
         return f"<TransactionTemplate {self.name}>"
@@ -196,6 +206,7 @@ class PlannedExpense(db.Model):
     transaction_id = db.Column(db.Integer, db.ForeignKey("transactions.id"), nullable=True)  # Связь с фактической транзакцией
     transaction = db.relationship("Transaction", foreign_keys=[transaction_id])
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
     def __repr__(self):
         return f"<PlannedExpense {self.name} {self.planned_date}>"
@@ -211,6 +222,7 @@ class Achievement(db.Model):
     is_unlocked = db.Column(db.Boolean, default=False, nullable=False)
     unlocked_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
     def __repr__(self):
         return f"<Achievement {self.name}>"
@@ -224,6 +236,25 @@ class Notification(db.Model):
     is_read = db.Column(db.Boolean, default=False, nullable=False)
     related_id = db.Column(db.Integer, nullable=True)  # ID связанного объекта (бюджет, долг, цель)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=True)
 
     def __repr__(self):
         return f"<Notification {self.title}>"
+
+
+class User(db.Model):
+    __tablename__ = 'users'
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(64), unique=True, nullable=False)
+    email = db.Column(db.String(128), unique=True, nullable=True)
+    password_hash = db.Column(db.String(256), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def set_password(self, password: str):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password: str) -> bool:
+        return check_password_hash(self.password_hash, password)
+
+    def __repr__(self):
+        return f"<User {self.username}>"

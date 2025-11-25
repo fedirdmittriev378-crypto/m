@@ -101,6 +101,9 @@ def generate_recurring_occurrences(up_to: datetime = None):
                 account = r.account,
                 note = (r.note or "") + " (recurring)"
             )
+            # preserve owner from recurring rule if present
+            if getattr(r, 'user_id', None):
+                t.user_id = r.user_id
             # Обновляем баланс счёта если есть
             if r.account:
                 if r.type == TransactionType.income:
